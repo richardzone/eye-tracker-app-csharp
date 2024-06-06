@@ -1,4 +1,6 @@
 ﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Windows.Forms;
 using Emgu.CV;
 using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
@@ -8,10 +10,9 @@ using log4net.Config;
 
 namespace eye_tracker_app_csharp;
 
+[SupportedOSPlatform("windows")]
 internal class Program
 {
-    private const int MaxScreenWidth = 1920;
-    private const int MaxScreenHeight = 1080;
     private static readonly ILog Log = LogManager.GetLogger(typeof(Program));
 
     [DllImport("user32.dll")]
@@ -24,7 +25,17 @@ internal class Program
     {
         XmlConfigurator.Configure();
 
-        int duration = 0; // Default duration is 0 (instant move)
+        if (Screen.PrimaryScreen == null)
+        {
+            Log.Error("Primary Screen is null");
+            return;
+        }
+
+        var screenWidth = Screen.PrimaryScreen.Bounds.Width;
+        var screenHeight = Screen.PrimaryScreen.Bounds.Height;
+        Log.Info($"Screen size is {screenWidth}x{screenHeight}");
+
+        var duration = 0; // Default duration is 0 (instant move)
 
         if (args.Length > 0 && int.TryParse(args[0], out var cameraIndex))
         {
@@ -32,13 +43,11 @@ internal class Program
 
             // Check for the --duration parameter
             for (var i = 1; i < args.Length; i++)
-            {
                 if (args[i] == "--duration" && i + 1 < args.Length && int.TryParse(args[i + 1], out var parsedDuration))
                 {
                     duration = parsedDuration;
                     Log.Info($"Duration provided via command line: {duration} ms");
                 }
-            }
         }
         else
         {
@@ -90,7 +99,7 @@ internal class Program
                 var x = 100 * markerIds[0] + markerIds[1];
                 var y = 100 * markerIds[2] + markerIds[3];
 
-                if (x is >= 0 and <= MaxScreenWidth && y is >= 0 and <= MaxScreenHeight)
+                if (x >= 0 && x <= screenWidth && y >= 0 && y <= screenHeight)
                 {
                     MoveCursor(x, y, duration);
                     Log.Info($"Mouse moved to ({x}, {y})");
