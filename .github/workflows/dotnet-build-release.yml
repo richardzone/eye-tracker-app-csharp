@@ -1,0 +1,72 @@
+name: .NET Core Desktop
+
+on:
+  push:
+    branches: [ "master" ]
+    tags:
+      - 'v*' # Triggers the workflow on version tags, e.g., v1.0, v2.1
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    runs-on: windows-latest  # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+
+    env:
+      Solution_Name: eye_tracker_app_csharp.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
+      Build_Directory: build_output                                     # Directory to place the build output
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Restore the application
+    - name: Restore the application
+      run: dotnet restore $env:Solution_Name
+
+    # Build the application
+    - name: Build the application
+      run: dotnet build $env:Solution_Name --configuration $env:Configuration --output $env:Build_Directory
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    # Upload the build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Build Artifacts
+        path: ${{ env.Build_Directory }}
+
+    # Create a GitHub release
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    # Upload the artifact to the release
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ env.Build_Directory }}
+        asset_name: Build_Artifacts.zip
+        asset_content_type: application/zip
