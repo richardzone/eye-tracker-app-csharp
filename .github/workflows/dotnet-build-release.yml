@@ -1,4 +1,4 @@
-name: .NET Core Desktop
+name: Build And Release
 
 on:
   push:
@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         configuration: [Debug, Release]
+        runtime: [win-x64, win-x86]  # Add other runtimes if needed
 
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
@@ -18,6 +19,8 @@ jobs:
     env:
       Solution_Name: eye_tracker_app_csharp.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
       Build_Directory: build_output                                     # Directory to place the build output
+      Publish_Directory: publish_output                                 # Directory to place the publish output
+      Zip_File: eye_tracker_app_cs.zip                                     # Name of the zip file
 
     steps:
     - name: Checkout
@@ -38,15 +41,24 @@ jobs:
     # Build the application
     - name: Build the application
       run: dotnet build $env:Solution_Name --configuration $env:Configuration --output $env:Build_Directory
+
+    # Publish the application as a single file
+    - name: Publish the application
+      run: dotnet publish $env:Solution_Name --configuration $env:Configuration --runtime $env:Runtime --self-contained true /p:PublishSingleFile=true --output $env:Publish_Directory
       env:
         Configuration: ${{ matrix.configuration }}
+        Runtime: ${{ matrix.runtime }}
+
+    # Zip the published output
+    - name: Zip the published output
+      run: Compress-Archive -Path $env:Publish_Directory\* -DestinationPath $env:Publish_Directory\$env:Zip_File
 
     # Upload the build artifacts
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: Build Artifacts
-        path: ${{ env.Build_Directory }}
+        path: ${{ env.Publish_Directory }}/{{ env.Zip_File }}
 
     # Create a GitHub release
     - name: Create GitHub Release
@@ -67,6 +79,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ env.Build_Directory }}
-        asset_name: Build_Artifacts.zip
+        asset_path: ${{ env.Publish_Directory }}/{{ env.Zip_File }}
+        asset_name: eye_tracker_app.zip
         asset_content_type: application/zip
