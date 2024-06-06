@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Drawing;
 using System.Runtime.Versioning;
 using System.Windows.Forms;
 using Emgu.CV;
@@ -14,12 +14,6 @@ namespace eye_tracker_app_csharp;
 internal class Program
 {
     private static readonly ILog Log = LogManager.GetLogger(typeof(Program));
-
-    [DllImport("user32.dll")]
-    private static extern bool SetCursorPos(int x, int y);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out Point lpPoint);
 
     private static void Main(string[] args)
     {
@@ -106,7 +100,6 @@ internal class Program
                 foreach (var marker in markerData) sortedIds.Push(new[] { marker.Id });
                 Log.Info($"Detected Aruco markers with IDs: {string.Join(", ", sortedIds.ToArray())}");
 
-
                 var markerIds = sortedIds.ToArray();
                 var x = 100 * markerIds[0] + markerIds[1];
                 var y = 100 * markerIds[2] + markerIds[3];
@@ -164,16 +157,11 @@ internal class Program
     {
         if (duration <= 0)
         {
-            SetCursorPos(targetX, targetY);
+            Cursor.Position = new Point(targetX, targetY);
             return;
         }
 
-        // Get the current cursor position
-        if (!GetCursorPos(out var currentPos))
-        {
-            Log.Error("Failed to get current cursor position.");
-            return;
-        }
+        var currentPos = Cursor.Position;
 
         var startX = currentPos.X;
         var startY = currentPos.Y;
@@ -185,14 +173,8 @@ internal class Program
         {
             var x = startX + (targetX - startX) * i / steps;
             var y = startY + (targetY - startY) * i / steps;
-            SetCursorPos(x, y);
+            Cursor.Position = new Point(x, y);
             Thread.Sleep(stepDuration);
         }
-    }
-
-    private struct Point
-    {
-        public int X;
-        public int Y;
     }
 }
