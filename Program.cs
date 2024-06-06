@@ -94,8 +94,20 @@ internal class Program
 
             if (ids.Size == 4)
             {
-                Log.Info($"Detected Aruco markers with IDs: {string.Join(", ", ids.ToArray())}");
-                var markerIds = ids.ToArray();
+                // Sort the markers by x-coordinate
+                var markerData = corners.ToArrayOfArray().Select((corner, index) => new
+                {
+                    corner[0].X,
+                    Corner = corner,
+                    Id = ids[index]
+                }).OrderBy(marker => marker.X).ToArray();
+
+                var sortedIds = new VectorOfInt();
+                foreach (var marker in markerData) sortedIds.Push(new[] { marker.Id });
+                Log.Info($"Detected Aruco markers with IDs: {string.Join(", ", sortedIds.ToArray())}");
+
+
+                var markerIds = sortedIds.ToArray();
                 var x = 100 * markerIds[0] + markerIds[1];
                 var y = 100 * markerIds[2] + markerIds[3];
 
