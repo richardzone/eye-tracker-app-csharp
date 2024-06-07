@@ -27,7 +27,7 @@ jobs:
           dotnet-version: '8.x'  # Adjust based on your project's .NET version
 
       - name: Publish
-        run: dotnet publish eye_tracker_app_csharp.csproj --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.architecture }} -o ./publish/${{ matrix.architecture }}/${{ matrix.configuration }}
+        run: dotnet publish eye_tracker_app_csharp.csproj --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.architecture }} --runtime win-${{ matrix.architecture }} --self-contained -o ./publish/${{ matrix.architecture }}/${{ matrix.configuration }}
 
       - name: Create ZIP package
         run: |
