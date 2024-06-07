@@ -79,8 +79,11 @@ internal class Program
                 break;
             }
 
+            // Crop the frame to the bottom half
+            var bottomHalf = new Mat(frame, new Rectangle(0, frame.Rows / 2, frame.Cols, frame.Rows / 2));
+
             using var grayscale = new Mat();
-            CvInvoke.CvtColor(frame, grayscale, ColorConversion.Bgr2Gray);
+            CvInvoke.CvtColor(bottomHalf, grayscale, ColorConversion.Bgr2Gray);
             var ids = new VectorOfInt();
             var corners = new VectorOfVectorOfPointF();
 
