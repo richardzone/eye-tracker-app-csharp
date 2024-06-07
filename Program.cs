@@ -148,7 +148,7 @@ internal class Program
                 }
                 else
                 {
-                    Log.Error($"Did not detect exactly 4 Aruco markers. {ids.Size} detected.");
+                    Log.Warn($"Did not detect exactly 4 Aruco markers. {ids.Size} detected.");
                 }
             }
         }
