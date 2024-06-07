@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
+          fetch-depth: 0
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
@@ -27,7 +27,7 @@ jobs:
           dotnet-version: '8.x'  # Adjust based on your project's .NET version
 
       - name: Publish
-        run: dotnet publish --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.architecture }} -o ./publish/${{ matrix.architecture }}/${{ matrix.configuration }}
+        run: dotnet publish eye_tracker_app_csharp.csproj --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.architecture }} -o ./publish/${{ matrix.architecture }}/${{ matrix.configuration }}
 
       - name: Create ZIP package
         run: |
@@ -49,7 +49,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
+          fetch-depth: 0
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
