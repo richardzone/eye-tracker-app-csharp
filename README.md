@@ -1,5 +1,5 @@
-[![Build Release Status Badge](https://img.shields.io/github/actions/workflow/status/richardzone/eye-tracker-app-csharp/build-release.yml?style=for-the-badge&label=Build%20Release)](https://github.com/richardzone/eye-tracker-app-csharp/actions)
 [![Dotnet Version Badge](https://img.shields.io/badge/CODE-%3C.NET%208.0%3E%20%3CC%23%2012.0%3E-darkblue?style=for-the-badge&labelColor=66ccff)](https://dotnet.microsoft.com/download)
+[![Build Release Status Badge](https://img.shields.io/github/actions/workflow/status/richardzone/eye-tracker-app-csharp/build-release.yml?style=for-the-badge&label=Build%20Release)](https://github.com/richardzone/eye-tracker-app-csharp/actions)
 
 # 演示方法
 
