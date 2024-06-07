@@ -45,8 +45,16 @@ internal class Program
         }
         else
         {
-            ListCameras();
-            cameraIndex = GetCameraSelection();
+            var cameraIds = ListCameras();
+            if (cameraIds.Count == 1)
+            {
+                cameraIndex = cameraIds[0];
+                Log.Info($"Only one camera ID found: {cameraIndex}. Using this ID.");
+            }
+            else
+            {
+                cameraIndex = GetCameraSelection(cameraIds);
+            }
         }
 
         if (cameraIndex < 0)
@@ -59,7 +67,7 @@ internal class Program
         try
         {
             capture = new VideoCapture(cameraIndex);
-            Log.Info($"Successfully opened camera with ID: {cameraIndex}");
+            Log.Info($"VideoCapture opened with camera ID: {cameraIndex}");
         }
         catch (Exception ex)
         {
@@ -126,8 +134,10 @@ internal class Program
         capture.Dispose();
     }
 
-    private static void ListCameras()
+    private static List<int> ListCameras()
     {
+        var cameraIds = new List<int>();
+
         // Set OpenCV log level to silent
         var logLevel = CvInvoke.LogLevel;
         Log.Debug($"OpenCV Current Log level: {logLevel}");
@@ -137,6 +147,7 @@ internal class Program
             {
                 using var capture = new VideoCapture(i);
                 if (!capture.IsOpened) continue;
+                cameraIds.Add(i);
                 Log.Info($"Camera ID {i} is available.");
             }
             catch
@@ -145,12 +156,20 @@ internal class Program
             }
 
         CvInvoke.LogLevel = logLevel;
+        return cameraIds;
     }
 
-    private static int GetCameraSelection()
+    private static int GetCameraSelection(List<int> cameraIds)
     {
+        Console.WriteLine("Available camera IDs:");
+        foreach (var id in cameraIds)
+        {
+            Console.WriteLine($"- {id}");
+        }
+
         Console.Write("Select a camera ID: ");
-        if (int.TryParse(Console.ReadLine(), out var selectedCamera)) return selectedCamera;
+        if (int.TryParse(Console.ReadLine(), out var selectedCamera) && cameraIds.Contains(selectedCamera))
+            return selectedCamera;
 
         Log.Error("Invalid camera ID input.");
         return -1;
