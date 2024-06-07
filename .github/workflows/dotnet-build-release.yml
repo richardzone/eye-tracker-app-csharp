@@ -20,7 +20,7 @@ jobs:
       Solution_Name: eye_tracker_app_csharp.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
       Build_Directory: build_output                                     # Directory to place the build output
       Publish_Directory: publish_output                                 # Directory to place the publish output
-      Zip_File: eye_tracker_app_cs.zip                                     # Name of the zip file
+      Zip_File: eye_tracker_app_cs.zip                                  # Name of the zip file
 
     steps:
     - name: Checkout
@@ -36,22 +36,22 @@ jobs:
 
     # Restore the application
     - name: Restore the application
-      run: dotnet restore $env:Solution_Name
+      run: dotnet restore ${{ env.Solution_Name }}
 
     # Build the application
     - name: Build the application
-      run: dotnet build $env:Solution_Name --configuration $env:Configuration --output $env:Build_Directory
+      run: dotnet build ${{ env.Solution_Name }} --configuration ${{ env.configuration }} --output ${{ env.Build_Directory }}
 
     # Publish the application as a single file
     - name: Publish the application
-      run: dotnet publish $env:Solution_Name --configuration $env:Configuration --runtime $env:Runtime --self-contained true /p:PublishSingleFile=true --output $env:Publish_Directory
+      run: dotnet publish ${{ env.Solution_Name }} --configuration ${{ env.Configuration }} --runtime ${{ env.Runtime }} --self-contained true /p:PublishSingleFile=true --output ${{ env.Publish_Directory }}
       env:
         Configuration: ${{ matrix.configuration }}
         Runtime: ${{ matrix.runtime }}
 
     # Zip the published output
     - name: Zip the published output
-      run: Compress-Archive -Path $env:Publish_Directory\* -DestinationPath $env:Publish_Directory\$env:Zip_File
+      run: Compress-Archive -Path ${{ env.Publish_Directory }}\* -DestinationPath ${{ env.Publish_Directory }}\${{ env.Zip_File }}
 
     # Upload the build artifacts
     - name: Upload build artifacts
