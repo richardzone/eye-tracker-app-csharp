@@ -19,8 +19,6 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        XmlConfigurator.Configure();
-
         // Set default log level to Info
         var logLevel = Level.Info;
 
@@ -47,7 +45,8 @@ internal class Program
                 i++; // Skip the next argument as it is the duration value
             }
 
-        // Set the log level
+        // Configure log4net and set the log level
+        XmlConfigurator.Configure();
         ((Hierarchy)LogManager.GetRepository()).Root.Level = logLevel;
         ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
