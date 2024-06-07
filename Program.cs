@@ -7,6 +7,8 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Util;
 using log4net;
 using log4net.Config;
+using log4net.Core;
+using log4net.Repository.Hierarchy;
 
 namespace eye_tracker_app_csharp;
 
@@ -19,6 +21,38 @@ internal class Program
     {
         XmlConfigurator.Configure();
 
+        // Set default log level to Info
+        var logLevel = Level.Info;
+
+        // Parse command line arguments
+        var cameraIndex = -1;
+        var duration = 0; // Default duration is 0 (instant move)
+
+        for (var i = 0; i < args.Length; i++)
+            if (args[i] == "--loglevel" && i + 1 < args.Length)
+            {
+                logLevel = GetLogLevel(args[i + 1]);
+                i++; // Skip the next argument as it is the log level value
+            }
+            else if (int.TryParse(args[i], out var parsedCameraIndex))
+            {
+                cameraIndex = parsedCameraIndex;
+                Log.Info($"Camera ID provided via command line: {cameraIndex}");
+            }
+            else if (args[i] == "--duration" && i + 1 < args.Length &&
+                     int.TryParse(args[i + 1], out var parsedDuration))
+            {
+                duration = parsedDuration;
+                Log.Info($"Duration provided via command line: {duration} ms");
+                i++; // Skip the next argument as it is the duration value
+            }
+
+        // Set the log level
+        ((Hierarchy)LogManager.GetRepository()).Root.Level = logLevel;
+        ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
+
+        Log.Info($"Log level set to: {logLevel}");
+
         if (Screen.PrimaryScreen == null)
         {
             Log.Error("Primary Screen is null");
@@ -29,21 +63,7 @@ internal class Program
         var screenHeight = Screen.PrimaryScreen.Bounds.Height;
         Log.Info($"Screen size is {screenWidth}x{screenHeight}");
 
-        var duration = 0; // Default duration is 0 (instant move)
-
-        if (args.Length > 0 && int.TryParse(args[0], out var cameraIndex))
-        {
-            Log.Info($"Camera ID provided via command line: {cameraIndex}");
-
-            // Check for the --duration parameter
-            for (var i = 1; i < args.Length; i++)
-                if (args[i] == "--duration" && i + 1 < args.Length && int.TryParse(args[i + 1], out var parsedDuration))
-                {
-                    duration = parsedDuration;
-                    Log.Info($"Duration provided via command line: {duration} ms");
-                }
-        }
-        else
+        if (cameraIndex < 0)
         {
             var cameraIds = ListCameras();
             if (cameraIds.Count == 1)
@@ -134,6 +154,19 @@ internal class Program
         capture.Dispose();
     }
 
+    private static Level GetLogLevel(string logLevelStr)
+    {
+        return logLevelStr.ToLower() switch
+        {
+            "debug" => Level.Debug,
+            "info" => Level.Info,
+            "warn" => Level.Warn,
+            "error" => Level.Error,
+            "fatal" => Level.Fatal,
+            _ => Level.Info
+        };
+    }
+
     private static List<int> ListCameras()
     {
         var cameraIds = new List<int>();
@@ -162,10 +195,7 @@ internal class Program
     private static int GetCameraSelection(List<int> cameraIds)
     {
         Console.WriteLine("Available camera IDs:");
-        foreach (var id in cameraIds)
-        {
-            Console.WriteLine($"- {id}");
-        }
+        foreach (var id in cameraIds) Console.WriteLine($"- {id}");
 
         Console.Write("Select a camera ID: ");
         if (int.TryParse(Console.ReadLine(), out var selectedCamera) && cameraIds.Contains(selectedCamera))
