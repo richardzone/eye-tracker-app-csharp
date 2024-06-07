@@ -65,6 +65,13 @@ internal class Program
         if (cameraIndex < 0)
         {
             var cameraIds = ListCameras();
+            if (cameraIds.Count == 0)
+            {
+                Log.Error("No cameras available.");
+                Console.WriteLine("No cameras available. Press any key to exit.");
+                Console.ReadKey();
+                return;
+            }
             if (cameraIds.Count == 1)
             {
                 cameraIndex = cameraIds[0];
