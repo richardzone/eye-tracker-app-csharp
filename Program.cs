@@ -65,21 +65,20 @@ internal class Program
         if (cameraIndex < 0)
         {
             var cameraIds = ListCameras();
-            if (cameraIds.Count == 0)
+            switch (cameraIds.Count)
             {
-                Log.Error("No cameras available.");
-                Console.WriteLine("No cameras available. Press any key to exit.");
-                Console.ReadKey();
-                return;
-            }
-            if (cameraIds.Count == 1)
-            {
-                cameraIndex = cameraIds[0];
-                Log.Info($"Only one camera ID found: {cameraIndex}. Using this ID.");
-            }
-            else
-            {
-                cameraIndex = GetCameraSelection(cameraIds);
+                case 0:
+                    Log.Error("No cameras available.");
+                    Console.WriteLine("No cameras available. Press any key to exit.");
+                    Console.ReadKey();
+                    return;
+                case 1:
+                    cameraIndex = cameraIds[0];
+                    Log.Info($"Only one camera ID found: {cameraIndex}. Using this ID.");
+                    break;
+                default:
+                    cameraIndex = GetCameraSelection(cameraIds);
+                    break;
             }
         }
 
@@ -115,48 +114,7 @@ internal class Program
                     break;
                 }
 
-                // Crop the frame to the bottom half
-                using var bottomHalf = new Mat(frame, new Rectangle(0, frame.Rows / 2, frame.Cols, frame.Rows / 2));
-
-                using var grayscale = new Mat();
-                CvInvoke.CvtColor(bottomHalf, grayscale, ColorConversion.Bgr2Gray);
-                using var ids = new VectorOfInt();
-                using var corners = new VectorOfVectorOfPointF();
-
-                ArucoInvoke.DetectMarkers(grayscale, dictionary, corners, ids, parameters);
-
-                if (ids.Size == 4)
-                {
-                    // Sort the markers by x-coordinate
-                    var markerData = corners.ToArrayOfArray().Select((corner, index) => new
-                    {
-                        corner[0].X,
-                        Corner = corner,
-                        Id = ids[index]
-                    }).OrderBy(marker => marker.X).ToArray();
-
-                    using var sortedIds = new VectorOfInt();
-                    foreach (var marker in markerData) sortedIds.Push(new[] { marker.Id });
-                    Log.Info($"Detected Aruco markers with IDs: {string.Join(", ", sortedIds.ToArray())}");
-
-                    var markerIds = sortedIds.ToArray();
-                    var x = 100 * markerIds[0] + markerIds[1];
-                    var y = 100 * markerIds[2] + markerIds[3];
-
-                    if (x >= 0 && x <= screenWidth && y >= 0 && y <= screenHeight)
-                    {
-                        MoveCursor(x, y, duration);
-                        Log.Info($"Mouse moved to ({x}, {y})");
-                    }
-                    else
-                    {
-                        Log.Error($"Calculated coordinates ({x}, {y}) are out of bounds.");
-                    }
-                }
-                else
-                {
-                    Log.Warn($"Did not detect exactly 4 Aruco markers. {ids.Size} detected.");
-                }
+                ParseFrameAndMove(frame, dictionary, parameters, screenWidth, screenHeight, duration);
             }
         }
         catch (Exception ex)
@@ -167,6 +125,62 @@ internal class Program
         {
             capture.Dispose();
         }
+    }
+
+    private static void ParseFrameAndMove(Mat frame, Dictionary dictionary, DetectorParameters parameters,
+        int screenWidth,
+        int screenHeight, int duration)
+    {
+        var (x, y) = ParseScreenCoordinates(frame, dictionary, parameters);
+        if (x.HasValue && y.HasValue) MoveMouse(x.Value, screenWidth, y.Value, screenHeight, duration);
+    }
+
+    private static (int? x, int? y) ParseScreenCoordinates(Mat frame, Dictionary dictionary,
+        DetectorParameters parameters)
+    {
+        // Crop the frame to the bottom half
+        using var bottomHalf = new Mat(frame, new Rectangle(0, frame.Rows / 2, frame.Cols, frame.Rows / 2));
+
+        using var ids = new VectorOfInt();
+        using var corners = new VectorOfVectorOfPointF();
+
+        ArucoInvoke.DetectMarkers(bottomHalf, dictionary, corners, ids, parameters);
+
+        if (ids.Size == 4)
+        {
+            // Sort the markers by x-coordinate
+            var markerData = corners.ToArrayOfArray().Select((corner, index) => new
+            {
+                corner[0].X,
+                Corner = corner,
+                Id = ids[index]
+            }).OrderBy(marker => marker.X).ToArray();
+
+            using var sortedIds = new VectorOfInt();
+            foreach (var marker in markerData) sortedIds.Push(new[] { marker.Id });
+            Log.Info($"Detected Aruco markers with IDs: {string.Join(", ", sortedIds.ToArray())}");
+
+            var markerIds = sortedIds.ToArray();
+            var x = 100 * markerIds[0] + markerIds[1];
+            var y = 100 * markerIds[2] + markerIds[3];
+
+            return (x, y);
+        }
+
+        Log.Warn($"Did not detect exactly 4 Aruco markers. {ids.Size} detected.");
+        return (null, null);
+    }
+
+    private static void MoveMouse(int x, int screenWidth, int y, int screenHeight, int duration)
+    {
+        if (x >= 0 && x <= screenWidth && y >= 0 && y <= screenHeight)
+        {
+            MoveCursor(x, y, duration);
+            Log.Info($"Mouse moved to ({x}, {y})");
+            return;
+        }
+
+        Log.Error($"Calculated coordinates ({x}, {y}) are out of bounds.");
     }
 
     private static Level GetLogLevel(string logLevelStr)
