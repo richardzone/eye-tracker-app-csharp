@@ -15,6 +15,8 @@ namespace eye_tracker_app_csharp;
 [SupportedOSPlatform("windows")]
 internal class Program
 {
+    private const int MaxQueryErrorCount = 50;
+    
     private static readonly ILog Log = LogManager.GetLogger(typeof(Program));
 
     private static void Main(string[] args)
@@ -85,7 +87,7 @@ internal class Program
 
         if (cameraIndex < 0)
         {
-            Log.Error("No valid camera ID selected.");
+            Log.Error("No valid camera ID selected. ");
             return;
         }
 
@@ -97,7 +99,7 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Log.Error("Failed to open camera.", ex);
+            Log.Fatal($"Failed to open camera {cameraIndex}", ex);
             return;
         }
 
@@ -106,13 +108,20 @@ internal class Program
 
         try
         {
+            var queryErrorCount = 0;
             while (true)
             {
                 using var frame = capture.QueryFrame();
                 if (frame == null)
                 {
-                    Log.Error("Failed to capture frame from camera.");
-                    break;
+                    queryErrorCount++;
+                    if (queryErrorCount > MaxQueryErrorCount)
+                    {
+                        Log.Fatal($"Failed to query frame from camera. Max error count of {MaxQueryErrorCount} exceeded");
+                        break;
+                    }
+                    Log.Error("Failed to query frame from camera. The program will retry.");
+                    continue;
                 }
 
                 // Crop the frame to the bottom half
