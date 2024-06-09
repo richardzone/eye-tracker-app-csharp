@@ -19,13 +19,13 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        // Set default log level to Info
-        var logLevel = Level.Info;
+        XmlConfigurator.Configure();
+
+        var logLevel = Level.Info; // Set default log level to Info
+        var duration = 0; // Default duration is 0 (instant move)
+        var cameraIndex = -1;
 
         // Parse command line arguments
-        var cameraIndex = -1;
-        var duration = 0; // Default duration is 0 (instant move)
-
         for (var i = 0; i < args.Length; i++)
             if (args[i] == "--loglevel" && i + 1 < args.Length)
             {
@@ -46,7 +46,6 @@ internal class Program
             }
 
         // Configure log4net and set the log level
-        XmlConfigurator.Configure();
         ((Hierarchy)LogManager.GetRepository()).Root.Level = logLevel;
         ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
@@ -107,8 +106,9 @@ internal class Program
         {
             while (true)
             {
-                using var frame = capture.QueryFrame();
-                if (frame == null)
+                using var frame = new Mat();
+                capture.Read(frame);
+                if (frame.IsEmpty)
                 {
                     Log.Error("Failed to capture frame from camera.");
                     break;
@@ -132,7 +132,7 @@ internal class Program
         int screenHeight, int duration)
     {
         var (x, y) = ParseScreenCoordinates(frame, dictionary, parameters);
-        if (x.HasValue && y.HasValue) MoveMouse(x.Value, screenWidth, y.Value, screenHeight, duration);
+        if (x.HasValue && y.HasValue) ValidateAndMoveCursor(x.Value, screenWidth, y.Value, screenHeight, duration);
     }
 
     private static (int? x, int? y) ParseScreenCoordinates(Mat frame, Dictionary dictionary,
@@ -171,7 +171,7 @@ internal class Program
         return (null, null);
     }
 
-    private static void MoveMouse(int x, int screenWidth, int y, int screenHeight, int duration)
+    private static void ValidateAndMoveCursor(int x, int screenWidth, int y, int screenHeight, int duration)
     {
         if (x >= 0 && x <= screenWidth && y >= 0 && y <= screenHeight)
         {
