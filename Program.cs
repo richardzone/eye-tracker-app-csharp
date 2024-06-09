@@ -1,9 +1,11 @@
-﻿using System.Drawing;
+﻿using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.Versioning;
 using System.Windows.Forms;
 using Emgu.CV;
 using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
+using Emgu.CV.UI;
 using Emgu.CV.Util;
 using log4net;
 using log4net.Config;
@@ -24,25 +26,47 @@ internal class Program
         var logLevel = Level.Info; // Set default log level to Info
         var duration = 0; // Default duration is 0 (instant move)
         var cameraIndex = -1;
+        var showVideo = false;
+        var videoWindowWidth = 640; // Default video width
+        var videoWindowHeight = 480; // Default video height
 
         // Parse command line arguments
         for (var i = 0; i < args.Length; i++)
-            if (args[i] == "--loglevel" && i + 1 < args.Length)
+            switch (args[i])
             {
-                logLevel = GetLogLevel(args[i + 1]);
-                i++; // Skip the next argument as it is the log level value
-            }
-            else if (int.TryParse(args[i], out var parsedCameraIndex))
-            {
-                cameraIndex = parsedCameraIndex;
-                Log.Info($"Camera ID provided via command line: {cameraIndex}");
-            }
-            else if (args[i] == "--duration" && i + 1 < args.Length &&
-                     int.TryParse(args[i + 1], out var parsedDuration))
-            {
-                duration = parsedDuration;
-                Log.Info($"Duration provided via command line: {duration} ms");
-                i++; // Skip the next argument as it is the duration value
+                case "--loglevel" when i + 1 < args.Length:
+                    logLevel = GetLogLevel(args[i + 1]);
+                    i++; // Skip the next argument as it is the log level value
+                    break;
+
+                case "--duration" when i + 1 < args.Length && int.TryParse(args[i + 1], out var parsedDuration):
+                    duration = parsedDuration;
+                    Log.Info($"Duration provided via command line: {duration} ms");
+                    i++; // Skip the next argument as it is the duration value
+                    break;
+
+                case "--show-video":
+                    showVideo = true;
+                    Log.Info("video window enabled via command line.");
+                    break;
+
+                case "--video-size" when i + 2 < args.Length &&
+                                         int.TryParse(args[i + 1], out var parsedWidth) &&
+                                         int.TryParse(args[i + 2], out var parsedHeight):
+                    videoWindowWidth = parsedWidth;
+                    videoWindowHeight = parsedHeight;
+                    Log.Info($"Video window size provided via command line: {videoWindowWidth}x{videoWindowHeight}");
+                    i += 2; // Skip the next two arguments as they are the width and height values
+                    break;
+
+                default:
+                    if (int.TryParse(args[i], out var parsedCameraIndex))
+                    {
+                        cameraIndex = parsedCameraIndex;
+                        Log.Info($"Camera ID provided via command line: {cameraIndex}");
+                    }
+
+                    break;
             }
 
         // Configure log4net and set the log level
@@ -102,6 +126,20 @@ internal class Program
         var dictionary = new Dictionary(Dictionary.PredefinedDictionaryName.Dict6X6_100);
         var parameters = DetectorParameters.GetDefault();
 
+        ImageBox? imageBox = null;
+        if (showVideo)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            imageBox = new ImageBox { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.StretchImage };
+            var form = new Form { Text = "Video" };
+            form.Controls.Add(imageBox);
+            form.ClientSize = new Size(videoWindowWidth, videoWindowHeight);
+            form.StartPosition = FormStartPosition.CenterScreen;
+            form.Show();
+            form.Activate(); // Bring the form to the foreground
+        }
+
         try
         {
             while (true)
@@ -115,6 +153,10 @@ internal class Program
                 }
 
                 ParseFrameAndMove(frame, dictionary, parameters, screenWidth, screenHeight, duration);
+
+                if (!showVideo) continue;
+                ShowImage(imageBox, frame);
+                Application.DoEvents();
             }
         }
         catch (Exception ex)
@@ -257,5 +299,18 @@ internal class Program
             Cursor.Position = new Point(x, y);
             Thread.Sleep(stepDuration);
         }
+    }
+
+    private static void ShowImage(ImageBox? imageBox, Mat frame)
+    {
+        if (imageBox == null)
+        {
+            Log.Fatal("ImageBox should not be null.");
+            return;
+        }
+        if (imageBox.InvokeRequired)
+            imageBox.Invoke(() => ShowImage(imageBox, frame));
+        else
+            imageBox.Image = frame;
     }
 }
